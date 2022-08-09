@@ -1,0 +1,16 @@
+---
+
+
+
+  - name: "Create Server VM3 "
+    command: openstack --os-cloud CH-822922 server create --image "CC-Ubuntu20.04" --flavor "m1.medium" --security-group "SHARED-CLOUDCOMPUTING" --security-group "default" --key-name "cpyKey"  --nic net-id=50073c73-5817-49c3-8e3a-69b8c357e158 cpy_VM3
+
+  - name: "Create server VM2"
+    command: openstack --os-cloud CH-822922 server create --image "CC-Ubuntu20.04" --flavor "m1.medium" --security-group "SHARED-CLOUDCOMPUTING" --security-group "default" --key-name "cpyKey"  --nic net-id=50073c73-5817-49c3-8e3a-69b8c357e158 cpy_VM2
+
+  - name: "VM2 Floating IP assign"
+    command: openstack --os-cloud CH-822922 server add floating ip cpy_VM2 129.114.26.25
+
+  - name: "VM3 floating IP assign"
+    command: openstack --os-cloud CH-822922 server add floating ip cpy_VM3 129.114.27.230
+   

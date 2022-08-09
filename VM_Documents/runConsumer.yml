@@ -1,0 +1,19 @@
+---
+
+
+  - name: Install python packages
+    become: yes
+    become_user: kafka
+    pip:
+      name: 
+      - kafka-python
+      - couchdb
+
+
+  - name: Execute Script
+    become: yes
+    become_user: kafka
+    command: python3 Consumer.py
+    args:
+      chdir: ~/_code
+...

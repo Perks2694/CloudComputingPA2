@@ -1,0 +1,296 @@
+---
+
+  - name: Configure Ports
+    command : "{{ item }}"
+    with_items:
+      - sudo ufw allow 2181
+      - sudo ufw allow 9092
+      - sudo apt-get install acl
+
+
+  - name: Install packages
+    become: yes
+    become_user: root
+    apt:
+      name:
+      - python3-pip
+      - git
+      - default-jdk
+      state: latest
+
+# - name: Creates directory
+#    file:
+#      path: ~/_code
+#      state: directory
+      
+#  - name: Clone git repository
+#    command : git clone https://perks2694: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@github.com/Perks2694/CloudComputing.git ~/_code
+
+  - name: Change CouchDB Config File Permission
+    become: yes
+    become_user: root
+    file:
+      path: /opt/couchdb/etc
+      owner: kafka
+      group: kafka
+      mode: 0644
+      recurse: yes
+      state: directory
+
+  - name: Change CouchDB Directory Permission
+    become: yes
+    become_user: root
+    command: find /opt/couchdb -type d -exec chmod 0770 {} \;
+
+  - name: Change Node Name
+    become: yes
+    become_user: root
+    replace:
+      dest: /opt/couchdb/etc/vm.args
+      regexp: '^-name couchdb@localhost$'
+      replace: '-name couchdb@129.114.26.25'
+
+  - name: Set Cookie
+    become: yes
+    become_user: root
+    replace:
+      dest: /opt/couchdb/etc/vm.args
+      regexp: '^-setcookie monster$'
+      replace: '-setcookie zaFradre6ech'
+
+  - name: Bind Cluster Address to Public
+    become: yes
+    become_user: root
+    lineinfile:
+      dest: /opt/couchdb/etc/local.ini
+      insertafter: '^\[chttpd\]$'
+      line: 'bind_address = 0.0.0.0'
+
+  - name: Bind Node Address to Public
+    become: yes
+    become_user: root
+    lineinfile:
+      dest: /opt/couchdb/etc/local.ini
+      insertafter: '^\[httpd\]$'
+      line: 'bind_address = 0.0.0.0'
+
+  - name: Add Admin User
+    become: yes
+    become_user: root
+    lineinfile:
+      dest: /opt/couchdb/etc/local.ini
+      insertafter: '^\[admins\]$'
+      line: 'cperkinsyan = couchdbpassword'
+
+  - name: Enable CouchDB Service
+    systemd:
+      daemon-reload: yes
+      name: couchdb
+      enabled: yes
+
+  - name: Start CouchDB Service
+    systemd:
+      name: couchdb
+      state: started
+      
+
+  - name: Install JRE after apt update
+    become: yes
+    become_user: root
+    apt:
+      name: 
+        - default-jre
+      state: present
+      update_cache: yes
+
+
+  - name: Create an user 
+    become: yes
+    become_user: root
+    user:
+      name: kafka
+      state: present
+      password: ''
+
+
+#  - name: Creates directory
+#    become: yes
+#    become_user: kafka
+#    file:
+#      path: ~/_code
+#      state: directory
+
+#  - name: Clone git repository
+#    become: yes
+#    become_user: kafka
+#    command : git clone https://perks2694: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@github.com/Perks2694/CloudComputing.git ~/_code
+
+  - name: Install python packages
+    pip:
+      name: 
+      - kafka-python
+      - couchdb
+
+  - name: Create a Directory /opt/kafka
+    become: yes
+    become_user: root
+    become: yes
+    become_user: kafka
+    vars: 
+      installation_dir : /opt/kafka
+    file:
+      path: "{{installation_dir}}"
+      state: directory
+      mode: 0755
+      owner: kafka
+      group: kafka
+
+#  - name: Download Kafka and Unzip 
+#    become: yes
+#    become_user: kafka
+#    vars: 
+##     installation_dir : /opt/kafka
+#    unarchive:
+#      src: https://dlcdn.apache.org/kafka/3.1.0/kafka_2.13-3.1.0.tgz
+#      dest: "{{installation_dir}}"
+#      mode: 0755
+#      remote_src: yes
+
+#  - name: Move all the files to parent Directory
+#    become: yes
+#    become_user: kafka
+#    vars: 
+#      installation_dir : /opt/kafka
+#    shell:
+#     mv {{installation_dir}}/kafka_*/* {{installation_dir}}/.
+
+  - name: Update the log path
+    become: yes
+    become_user: kafka
+    vars: 
+      installation_dir : /opt/kafka
+    replace:
+      path: "{{installation_dir}}/config/server.properties"
+      regexp: 'log.dirs=(.+)'
+      replace: 'log.dirs={{installation_dir}}/logs'
+      backup: yes
+
+  - name: Update the advertised listeners
+    become: yes
+    become_user: kafka
+    vars: 
+      installation_dir : /opt/kafka
+    replace:
+      path: "{{installation_dir}}/config/server.properties"
+      regexp: '#advertised.listeners=PLAINTEXT://your.host.name:9092'
+      replace: 'advertised.listeners=PLAINTEXT://129.114.26.25:9092'
+      backup: yes
+
+  - name: Update the zookeeper.connect
+    become: yes
+    become_user: kafka
+    vars: 
+      installation_dir : /opt/kafka
+    replace:
+      path: "{{installation_dir}}/config/server.properties"
+      regexp: 'zookeeper.connect=localhost:2181'
+      replace: 'zookeeper.connect=127.0.0.1:2181'
+      backup: yes
+
+  - name: Update the Java Heap Size for Kafka
+    become: yes
+    become_user: kafka
+    vars: 
+      installation_dir : /opt/kafka
+    replace:
+      path: "{{installation_dir}}/bin/kafka-server-start.sh"
+      regexp: 'export KAFKA_HEAP_OPTS=(".+")'
+      replace: 'export KAFKA_HEAP_OPTS="-Xmx520M -Xms520M"'
+      backup: yes
+  
+
+  - name: Create a Service file for ZooKeeper with Copy module
+    become: yes
+    become_user: root
+    vars: 
+      installation_dir : /opt/kafka
+    copy:
+      dest: /etc/systemd/system/zookeeper.service
+      content: |
+        [Unit]
+        Requires=network.target remote-fs.target
+        After=network.target remote-fs.target
+
+        [Service]
+        Type=simple
+        User=kafka
+        ExecStart={{installation_dir}}/bin/zookeeper-server-start.sh {{installation_dir}}/config/zookeeper.properties
+        ExecStop={{installation_dir}}/bin/zookeeper-server-stop.sh
+        Restart=on-abnormal
+
+        [Install]
+        WantedBy=multi-user.target
+      mode: 0755
+      
+  - name: Create a Service file for Kafka with Copy module
+    become: yes
+    become_user: root
+    vars: 
+      installation_dir : /opt/kafka
+    copy:
+      dest: /etc/systemd/system/kafka.service
+      content: |
+        [Unit]
+        Requires=zookeeper.service
+        After=zookeeper.service
+
+        [Service]
+        Type=simple
+        User=kafka
+        ExecStart=/bin/sh -c '{{installation_dir}}/bin/kafka-server-start.sh {{installation_dir}}/config/server.properties > {{installation_dir}}/kafkaservice.log 2>&1'
+        ExecStop={{installation_dir}}/bin/kafka-server-stop.sh
+        Restart=on-abnormal
+
+        [Install]
+        WantedBy=multi-user.target
+      mode: 0755
+
+  - name: Start Services
+    tags: startservices
+    become: yes
+    become_user: root
+    systemd:
+      name: '{{item}}'
+      state: started
+      enabled: yes
+    with_items:
+      - "zookeeper"
+      - "kafka"
+    
+  - name: Validating if zookeeper is up and listening on port 2181
+    wait_for:
+      host: localhost
+      port: 2181
+      delay: 10
+      timeout: 30
+      state: started
+      msg: "Zookeeper not seem to be running"
+
+  - name: Validating if Kafka is up and listening on port 2181
+    wait_for:
+      host: localhost
+      port: 9092
+      delay: 10
+      timeout: 30
+      state: started
+      msg: "Zookeeper not seem to be running"
+
+  - name: start couchdb
+    become: yes
+    become_user: root
+    service:
+      name: couchdb
+      state: restarted
+
+   
+... 

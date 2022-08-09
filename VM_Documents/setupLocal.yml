@@ -1,0 +1,16 @@
+---
+  - name: Creates directory
+    file:
+      path: ~/_code
+      state: directory
+
+  - name: Install kafka-python within a user home directory
+    pip:
+        name: 
+          - kafka-python  
+          - couchdb  
+
+  - name: Clone git repository
+    command : git clone https://perks2694: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@github.com/Perks2694/CloudComputing.git ~/_code
+     
+...

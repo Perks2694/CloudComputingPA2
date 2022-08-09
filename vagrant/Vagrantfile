@@ -1,0 +1,113 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# All Vagrant configuration is done below. The "2" in Vagrant.configure
+# configures the configuration version (we support older styles for
+# backwards compatibility). Please don't change it unless you know what
+# you're doing.
+Vagrant.configure("2") do |config|
+config.vm.define "ubuntu" do |ubuntu|
+  ubuntu.vm.box = "generic/ubuntu2004"
+  ubuntu.vm.box_version = "3.1.16"
+  ubuntu.vm.hostname = "ubuntu"
+  
+
+  # Disable automatic box update checking. If you disable this, then
+  # boxes will only be checked for updates when the user runs
+  # `vagrant box outdated`. This is not recommended.
+  # config.vm.box_check_update = false
+
+  # Create a forwarded port mapping which allows access to a specific port
+  # within the machine from a port on the host machine. In the example below,
+  # accessing "localhost:8080" will access port 80 on the guest machine.
+  # NOTE: This will enable public access to the opened port
+  # config.vm.network "forwarded_port", guest: 80, host: 8080
+
+  # Create a forwarded port mapping which allows access to a specific port
+  # within the machine from a port on the host machine and only allow access
+  # via 127.0.0.1 to disable public access
+  # config.vm.network "forwarded_port", guest: 80, host: 8080, host_ip: "127.0.0.1"
+
+  # Create a private network, which allows host-only access to the machine
+  # using a specific IP.
+  #config.vm.network "private_network", ip: "192.168.86.49"
+
+  # Create a public network, which generally matched to bridged network.
+  # Bridged networks make the machine appear as another physical device on
+  # your network.
+  # config.vm.network "public_network"
+
+  # Share an additional folder to the guest VM. The first argument is
+  # the path on the host to the actual folder. The second argument is
+  # the path on the guest to mount the folder. And the optional third
+  # argument is a set of non-required options.
+ ubuntu.vm.synced_folder "D:/VM_Documents", "/vagrant_data"
+
+  # Provider-specific configuration so you can fine-tune various
+  # backing providers for Vagrant. These expose provider-specific options.
+  # Example for VirtualBox:
+  #
+   ubuntu.vm.provider "virtualbox" do |vb|
+     # Display the VirtualBox GUI when booting the machine
+    vb.gui = true
+  
+     # Customize the amount of memory on the VM:
+     vb.memory = "1024"
+   end
+   
+   ubuntu.vm.provision "shell", path: "bootstrap.sh", privileged: false
+   
+   ubuntu.vm.provision "file", source: "D:/VM_Documents/auth_keys", destination: "~/.ssh/"
+   ubuntu.vm.provision "file", source: "./ansible.cfg", destination: "~/.ansible.cfg"
+   ubuntu.vm.provision "file", source: "./MyInventory", destination: "~/.ansible/MyInventory"
+   ubuntu.vm.provision "file", source: "D:/VM_Documents/master_playbook.yml", destination: "/home/vagrant/master_playbook.yml"
+   ubuntu.vm.provision "file", source: "D:/VM_Documents/setupVM2.yml", destination: "/home/vagrant/setupVM2.yml"
+   ubuntu.vm.provision "file", source: "D:/VM_Documents/setupVM3.yml", destination: "/home/vagrant/setupVM3.yml"
+   ubuntu.vm.provision "file", source: "D:/VM_Documents/setupLocal.yml", destination: "/home/vagrant/setupLocal.yml"
+   ubuntu.vm.provision "file", source: "D:/VM_Documents/runConsumer.yml", destination: "/home/vagrant/runConsumer.yml"
+   ubuntu.vm.provision "file", source: "D:/VM_Documents/runProducer.yml", destination: "/home/vagrant/runproducer.yml"
+   ubuntu.vm.provision "file", source: "D:/VM_Documents/clouds.yaml", destination: "~/.config/openstack/clouds.yaml"
+   #ubuntu.vm.provision "file", source: "D:/VM_Documents/test_playbook.yml", destination: "/home/vagrant/test_playbook.yml"
+   #ubuntu.vm.provision "file", source: "D:/VM_Documents/createChameleon.yml", destination: "/home/vagrant/createChameleon.yml"
+   
+   
+   ubuntu.vm.provision "file", source: "./git_key.pub", destination: "~/.ssh/"
+   ubuntu.vm.provision "file", source: "./git_key", destination: "~/.ssh/"
+   
+   
+   $script = <<-SCRIPT
+     chmod go-rwx /home/vagrant/.ssh/auth_keys
+  SCRIPT
+  
+  $do_installs = <<-SCRIPT
+	sudo add-apt-repository universe
+	sudo apt install python3-pip --yes
+	sudo apt  install python3-openstackclient --yes
+	sudo python3 -m pip install --upgrade pip setuptools wheel
+	sudo pip3 install openstacksdk==0.61
+	pip install --upgrade python-openstackclient
+	sudo -H pip3 install --upgrade ansible
+  SCRIPT
+  
+  $after_ansible = <<-SCRIPT
+  ansible-galaxy collection install openstack.cloud
+  SCRIPT
+  
+
+  
+  ubuntu.vm.provision "shell", inline: $do_installs, privileged: false
+  ubuntu.vm.provision "shell", inline: $script, privileged: false
+
+  ubuntu.vm.provision "ansible_local" do |ansible|
+    ansible.playbook = "master_playbook.yml"
+	ansible.provisioning_path = "/home/vagrant/"
+    ansible.verbose = true
+    ansible.limit = "all"
+    ansible.inventory_path = ".ansible/MyInventory"  # inventory file
+	end
+
+	
+	ubuntu.vm.provision "shell", inline: $after_ansible, privileged: false
+  
+end
+end

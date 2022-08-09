@@ -1,0 +1,12 @@
+[MyLocalVMs]
+127.0.0.1  ansible_connection=local
+
+[MyChameleonVMs]
+129.114.26.25 ansible_connection=ssh ansible_ssh_private_key_file=~/.ssh/auth_keys
+129.114.27.230 ansible_connection=ssh ansible_ssh_private_key_file=~/.ssh/auth_keys
+
+[VM2]
+129.114.26.25 ansible_connection=ssh ansible_ssh_private_key_file=~/.ssh/auth_keys
+
+[VM3]
+129.114.27.230 ansible_connection=ssh ansible_ssh_private_key_file=~/.ssh/auth_keys

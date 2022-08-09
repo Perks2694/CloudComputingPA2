@@ -1,0 +1,8 @@
+---
+
+  - name: run Producer.py
+    become: yes
+    become_user: cc
+    command: Python3 ~/_code/Producer.py
+
+...
